@@ -17,11 +17,12 @@ def agregar_productos():
 	  "cantidad": cantidad
 	}
 	productos.append(producto)
-	print(f"Producto {nombre} agregado correctamente.")
+	print(f"Producto '{nombre}' agregado correctamente.")
 def listar_productos():
 	if not productos:
 		print("No hay productos registrados.")
 		return
+	print("\n----Lista de Productos----")
 	for p in productos:
 		print(f"{p['codigo']} - {p['nombre']} | Precio: ${p['precio']} | Cantidad: {p['cantidad']}")
 
