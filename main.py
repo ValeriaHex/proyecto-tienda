@@ -1,9 +1,9 @@
 import os
 from datetime import datetime
-from productos import *
-from clientes import *
-from ventas import *
-from inventario import *
+from managers.producto_manager import *
+from managers.cliente_manager import *
+from managers.venta_manager import *
+from managers.inventario_manager import *
 
 def mostrar_menu():
 	os.system('cls')
