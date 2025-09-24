@@ -1,21 +1,9 @@
-import os
-from datetime import datetime
-from managers.producto_manager import *
-from managers.cliente_manager import *
-from managers.venta_manager import *
-from managers.inventario_manager import *
+from consola.menu import mostrar_menu
+from managers.producto_manager import agregar_productos, listar_productos
+from managers.cliente_manager import agregar_clientes, listar_clientes
+from managers.venta_manager import registrar_venta, listar_ventas
+from managers.inventario_manager import mostrar_inventario, actualizar_stock
 
-def mostrar_menu():
-	os.system('cls')
-	print(" ---------------- Tienda ----------------")
-	print("  1. Gestionar Productos")
-	print("  2. Gestionar Clientes")
-	print("  3. Gestionar ventas")
-	print("  4. Gestionar inventario")
-	print("  5. Salir")
-	print(" ----------------------------------------")
-	op = input(" Seleccione una opcion: ")
-	return op
 while True:
 	op = mostrar_menu()
 
@@ -44,7 +32,7 @@ while True:
 	  print(" 2. Listar ventas")
 	  sb = input(" Elige: ")
 	  if sb == "1":
-	    registrar_venta(productos)
+	    registrar_venta()
 	  elif sb == "2":
 	    listar_ventas()
 	  input(" Presiona Enter para continuar...")
@@ -54,9 +42,9 @@ while True:
 	  print(" 2. Actualizar stock")
 	  si = input(" Elige: ")
 	  if si == "1":
-	    mostrar_inventario(productos)
+	    mostrar_inventario()
 	  elif si == "2":
-	    actualizar_stock(productos)
+	    actualizar_stock()
 	  input(" Presiona Enter para continuar...")
 
 	elif op == "5":
