@@ -1,12 +1,12 @@
 productos = []
 def agregar_productos():
-	nombre = input("Nombre del producto: ")
-	codigo = input("Codigo/ID: ")
-	precio = float(input("Precio: "))
-	talla = input("Talla: ")
-	color = input("Color: ")
-	categoria = input("Categoria: ")
-	cantidad = int(input("Cantidad disponible: "))
+	nombre = input(" Nombre del producto: ")
+	codigo = input(" Codigo/ID: ")
+	precio = float(input(" Precio: "))
+	talla = input(" Talla: ")
+	color = input(" Color: ")
+	categoria = input(" Categoria: ")
+	cantidad = int(input(" Cantidad disponible: "))
 	producto = {
 	  "nombre": nombre,
 	  "codigo": codigo,
@@ -17,13 +17,13 @@ def agregar_productos():
 	  "cantidad": cantidad
 	}
 	productos.append(producto)
-	print(f"Producto '{nombre}' agregado correctamente.")
+	print(f" Producto '{nombre}' agregado correctamente.")
 def listar_productos():
 	if not productos:
-		print("No hay productos registrados.")
+		print(" No hay productos registrados.")
 		return
-	print("\n----Lista de Productos----")
+	print("\n -------- Lista de Productos --------")
 	for p in productos:
-		print(f"{p['codigo']} - {p['nombre']} | Precio: ${p['precio']} | Cantidad: {p['cantidad']}")
+		print(f" {p['codigo']} - {p['nombre']} | Precio: ${p['precio']} | Cantidad: {p['cantidad']}")
 
 
