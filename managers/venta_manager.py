@@ -10,7 +10,7 @@ def registrar_venta():
     cursor.execute("SELECT * FROM productos")
     filas = cursor.fetchall()
     productos = [dict(prod) for prod in filas]
-    
+
     if len(productos) == 0:
         print(" ⛔ No hay productos disponibles para vender.")
         conn.close()
@@ -38,7 +38,7 @@ def registrar_venta():
             if indice < 0 or indice >= len(productos):
                 print(" ⚠ Opción inválida.")
                 continue
-            
+
             producto = productos[indice]
 
             #verificar stock
@@ -87,15 +87,15 @@ def registrar_venta():
         cursor.execute("""
             INSERT INTO venta_items (venta_id, producto_id, nombre, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)
             """, (venta_id, producto_id, item['nombre'], item['cantidad'], item['precio_unitario'], item['subtotal']))
-    
+
     conn.commit()
 
     print("\n ✅ ¡Venta registrada con éxito!\n")
     print(" 🧾 Detalles de la venta")
-    print("─────────────────────────────────────────")
+    print("──────────────────────────────────────────")
     for item in carrito:
-        print(f" 🛍️ {item['cantidad']} x {item['nombre']} @ ${item['precio_unitario']:.2f} = ${item['subtotal']:.2f}")
-    print("─────────────────────────────────────────")
+        print(f" 🛍️  {item['cantidad']} x {item['nombre']} @ ${item['precio_unitario']:.2f} = ${item['subtotal']:.2f}")
+    print("──────────────────────────────────────────")
     print(f" 💵 Total de la venta: ${total_venta:.2f}")
     conn.close()
 
@@ -103,7 +103,7 @@ def listar_ventas():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM ventas ORDER BY fecha DESC")
+    cursor.execute("SELECT * FROM ventas ORDER BY fecha ")
     ventas = cursor.fetchall()
 
     if not ventas:
@@ -112,7 +112,7 @@ def listar_ventas():
         return
 
     print("\n 📒 Historial de Ventas")
-    print("═════════════════════════════════════════════════════════════════")
+    print("══════════════════════════════════════════════════════════════════")
     for v in ventas:
         print(f"\n 🧾 Venta ID: {v['id']} | Fecha: {v['fecha']} | Total: ${v['total']:.2f}")
         print("   Detalles:")
@@ -122,8 +122,55 @@ def listar_ventas():
         for item in items:
             #print(f" {item['cantidad']} x {item['nombre']} -> ${item['precio_unitario']} = ${item['subtotal']}")
              print(f"   • {item['cantidad']} x {item['nombre']} -> ${item['precio_unitario']:.2f} = ${item['subtotal']:.2f} \n")
-        
-    print("═════════════════════════════════════════════════════════════════\n")
-    
+
+    print("══════════════════════════════════════════════════════════════════\n")
+
     conn.close()
 
+def eliminar_venta():
+    from database.conexion import get_db_connection
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Mostrar las ventas disponibles
+        cursor.execute("SELECT id, fecha, total FROM ventas")
+        ventas = cursor.fetchall()
+
+        if not ventas:
+            print("\n ⛔ No hay ventas registradas.")
+            conn.close()
+            return
+
+        print("\n 📒 Ventas registradas ")
+        print("─────────────────────────────────────────")
+        print(f" {'ID':<4} {'Fecha y Hora':<25} {'Total':<10} ")
+        print("─────────────────────────────────────────")
+        for v in ventas:
+            print(f" {v['id']:<4} {v['fecha']:<25} ${v['total']:<10.2f}")
+            #print(f" 🧾 ID: {v['id']} | Fecha: {v['fecha']} | Total: ${v['total']}")
+        print("─────────────────────────────────────────")
+
+        # Pedir el ID de la ventan a eliminar
+        venta_id = input("\n 💬 ID de la venta a eliminar: ")
+
+        # Verificar que exista
+        cursor.execute("SELECT id FROM ventas WHERE id = ?", (venta_id,))
+        venta = cursor.fetchone()
+
+        if venta:
+            confirmar = input(f" Está seguro de eliminar la venta ID {venta_id}? (s/n): ").lower()
+            if confirmar == "s":
+                cursor.execute("DELETE FROM ventas WHERE id = ?", (venta_id,))
+                conn.commit()
+                print("\n ✅ Venta eliminada correctamente.")
+            else:
+                print("\n ❌ Operación cancelada.")
+        else:
+            print("\n ⚠ No existe ninguna venta con ese ID.")
+
+    except Exception as e:
+        print(" ⚠ Error al eliminar la venta:", e)
+    finally:
+        conn.close()
