@@ -1,11 +1,9 @@
 import curses
-from rich.console import Console
 
-console = Console()
 def main_menu(stdscr):
     curses.curs_set(0)
 
-    menu = [
+    options = [
         "Gestionar productos",
         "Gestionar clientes",
         "Gestionar ventas",
@@ -22,9 +20,9 @@ def main_menu(stdscr):
         h, w = stdscr.getmaxyx()
 
         #Mostrar menu
-        for idx, row in enumerate(menu):
+        for idx, row in enumerate(options):
             x = w//2 - len(row)//2
-            y = h//2 - len(menu)//2 + idx
+            y = h//2 - len(options)//2 + idx
             if idx == current_row:
                 stdscr.attron(curses.color_pair(1))
                 stdscr.addstr(y, x, row)
@@ -33,11 +31,11 @@ def main_menu(stdscr):
                 stdscr.addstr(y, x, row)
         
         stdscr.refresh()
+        
         key = stdscr.getch()
-
         if key == curses.KEY_UP and current_row > 0 :
             current_row -= 1
-        elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
+        elif key == curses.KEY_DOWN and current_row < len(options) - 1:
             current_row += 1
         elif key in [curses.KEY_ENTER, 10, 13]:
-            return menu[current_row]
+            return options[current_row]
