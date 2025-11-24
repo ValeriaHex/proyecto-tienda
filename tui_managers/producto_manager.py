@@ -8,8 +8,14 @@ def input_box(stdscr, prompt):
   stdscr.clear()
   h, w = stdscr.getmaxyx()
 
+  titulo = "🆕 REGISTRAR NUEVO PRODUCTO"
+  separador = "─" * (len(titulo) + 4)
+  stdscr.addstr(1, max(2, w//2 - len(titulo)//2), titulo)
+  stdscr.addstr(2, max(2, w//2 - len(separador)//2), separador)
+  stdscr.refresh()
+
   texto = prompt[:w-4]
-  stdscr.addstr(2, 2, texto)
+  stdscr.addstr(3, 2, texto)
   stdscr.refresh()
 
   win = curses.newwin(3, w-4, 4, 2)
@@ -17,18 +23,15 @@ def input_box(stdscr, prompt):
   win.refresh()
 
   curses.echo()
-  user_input = win.getstr(1, 1, w-6).decode("utf-8")
+  ui = win.getstr(1, 1, w-6).decode("utf-8")
   curses.noecho()
 
-  return user_input
+  return ui
 
 def agregar_productos_tui(stdscr):
   stdscr.clear()
-
   h, w = stdscr.getmaxyx()
-  titulo = "🆕 REGISTRAR NUEVO PRODUCTO"
-  stdscr.addstr(0, max(0, w//2 - len(titulo)//2), titulo, curses.A_BOLD)
-  stdscr.refresh()
+  
   nombre = input_box(stdscr, "🔤 Nombre del producto: ")
   precio = input_box(stdscr, "💲 Precio: ")
   talla = input_box(stdscr, "📏 Talla: ")
@@ -54,7 +57,7 @@ def agregar_productos_tui(stdscr):
   conn.commit()
   conn.close()
 
-  stdscr.addstr(12, 2, f"✅ Producto '{nombre}' agregado correctamente.")
+  stdscr.addstr(8, 2, f"✅ Producto '{nombre}' agregado correctamente.")
   stdscr.refresh()
   stdscr.getch()
 
@@ -69,7 +72,7 @@ def listar_productos():
 		print(" ⛔ No hay productos registrados.")
 		return
 
-	print("\n 📋 Lista de Productos")
+	print("\n 📋 LISTA DE PRODUCTOS ")
 	print("──────────────────────────────────────────────────────────────────────────────")
 	print(f" {'ID':<4} {'Nombre':<20} {'Precio':<10} {'Stock':<8} {'Talla':<8} {'Color':<10} {'Categoría'}")
 	print("──────────────────────────────────────────────────────────────────────────────")
@@ -95,7 +98,7 @@ def eliminar_producto_tui(stdscr):
     conn.close()
     return
   
-  opciones = [f"{p['id']}: {p['nombre']} - ${p['precio']:.2f} | Stock: {p['cantidad']}" for p in productos]
+  opciones = [f"{p['id']}- {p['nombre']} - ${p['precio']:.2f} | Stock: {p['cantidad']}" for p in productos]
   opciones.append("Volver")
 
   current_row = 0
@@ -104,13 +107,16 @@ def eliminar_producto_tui(stdscr):
     h, w = stdscr.getmaxyx()
 
     # Título:
-    stdscr.addstr(1, w//2 - len("📋 Eliminar producto")//2, "📋 Eliminar producto", curses.A_BOLD)
-    stdscr.addstr(2, 0, "-"*w)
+    titulo = "🆕 ELIMINAR PRODUCTO"
+    separador = "─" * (len(titulo) + 4)
+    stdscr.addstr(1, max(2, w//2 - len(titulo)//2), titulo)
+    stdscr.addstr(2, max(2, w//2 - len(separador)//2), separador)
+    stdscr.refresh()
 
     # Productos:
     for idx, row in enumerate(opciones):
       x = 2
-      y = 4 + idx
+      y = 3 + idx
       if idx == current_row:
         stdscr.attron(curses.color_pair(1))
         stdscr.addstr(y, x, row)

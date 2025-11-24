@@ -5,9 +5,12 @@ from contextlib import redirect_stdout
 import io
 from managers.producto_manager import listar_productos
 from tui_managers.producto_manager import agregar_productos_tui, eliminar_producto_tui
-from managers.cliente_manager import agregar_clientes, listar_clientes, eliminar_cliente
-from managers.venta_manager import registrar_venta, listar_ventas, eliminar_venta
-from managers.inventario_manager import mostrar_inventario, actualizar_stock
+from managers.cliente_manager import listar_clientes
+from tui_managers.cliente_manager import agregar_clientes_tui, eliminar_cliente_tui
+from managers.venta_manager import listar_ventas
+from tui_managers.venta_manager import registrar_venta_tui, eliminar_venta_tui
+from managers.inventario_manager import mostrar_inventario
+from tui_managers.inventario_manager import actualizar_stock_tui
 
 def pausa():
     Prompt.ask("\n Presiona enter para continuar...")
@@ -84,11 +87,11 @@ def run_tui(stdscr):
             sub_op = select_submenu(stdscr, sub_menu)
 
             if sub_op == "Agregar cliente":
-                mostrar_output_curses(stdscr, agregar_clientes)
+                agregar_clientes_tui(stdscr)
             elif sub_op == "Listar clientes":
                 mostrar_output_curses(stdscr, listar_clientes)
             elif sub_op == "Eliminar cliente":
-                mostrar_output_curses(stdscr, eliminar_cliente)
+                eliminar_cliente_tui(stdscr)
 
          # VENTAS:
         elif op == "Gestionar ventas":
@@ -96,11 +99,11 @@ def run_tui(stdscr):
             sub_op = select_submenu(stdscr, sub_menu)
 
             if sub_op == "Registrar venta":
-                mostrar_output_curses(stdscr, registrar_venta)
+                registrar_venta_tui(stdscr)
             elif sub_op == "Listar ventas":
                 mostrar_output_curses(stdscr, listar_ventas)
             elif sub_op == "Eliminar venta":
-                mostrar_output_curses(stdscr, eliminar_venta)
+                eliminar_venta_tui(stdscr)
 
         # INVENTARIO:
         elif op == "Gestionar inventario":
@@ -110,7 +113,7 @@ def run_tui(stdscr):
             if sub_op == "Mostrar inventario":
                 mostrar_output_curses(stdscr, mostrar_inventario)
             elif sub_op == "Actualizar stock":
-                mostrar_output_curses(stdscr, actualizar_stock)
+                actualizar_stock_tui(stdscr)
 
 if __name__ == "__main__":
     curses.wrapper(run_tui)

@@ -1,104 +1,118 @@
+import curses
 from modelos.venta import Venta
 from database.conexion import get_db_connection
 from datetime import datetime
+from curses import textpad
 
-ventas = []
-def registrar_venta():
+def input_box(stdscr, prompt, y_start):
+    curses.curs_set(1)
+    h, w = stdscr.getmaxyx()
+    stdscr.addstr(y_start, 2, prompt[:w-4])
+    stdscr.refresh()
+
+    win = curses.newwin(3, w-4, y_start+1, 2)
+    win.box()
+    win.refresh()
+
+    curses.echo()
+    ui = win.getstr(1, 1, w-6).decode("utf-8")
+    curses.noecho()
+    return ui
+
+def registrar_venta_tui(stdscr):
+    curses.curs_set(0)
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM productos")
-    filas = cursor.fetchall()
-    productos = [dict(prod) for prod in filas]
-
-    if len(productos) == 0:
-        print(" ⛔ No hay productos disponibles para vender.")
+    cursor.execute("SELECT * FROM productos ORDER BY id")
+    productos = [dict(p) for p in cursor.fetchall()]  
+    
+    if not productos:
+        stdscr.addstr(2,2,"⛔ No hay productos disponibles para vender.")
+        stdscr.refresh()
+        stdscr.getch()
         conn.close()
         return
 
-    carrito = [] #productos comprados en esta venta
+    carrito = []
     while True:
-        print("\n 🛒 Productos Disponibles")
-        print("────────────────────────────────────────────────")
-        print(f" {'N°':<4} {'Producto':<23} {'Precio':<10} {'Stock'}")
-        print("────────────────────────────────────────────────")
+        stdscr.clear()
+        h, w = stdscr.getmaxyx()
 
-        for i, prod in enumerate(productos):
-            #print(f" {i+1}. {prod['nombre']} - ${prod['precio']} - Stock: {prod['cantidad']}")
-            print(f" {i+1:<4} {prod['nombre']:<23} ${prod['precio']:<9.2f} {prod['cantidad']}")
-        print("────────────────────────────────────────────────")
+        # Título
+        titulo = "🛒 REGISTRAR NUEVA VENTA"
+        separador = "─" * (len(titulo)+4)
+        stdscr.addstr(1, max(2, w//2 - len(titulo)//2), titulo)
+        stdscr.addstr(2, max(2, w//2 - len(separador)//2), separador)
 
-        elec = input(" ❣ Elige el número del producto (o 0 para terminar): ")
+        # Lista de productos
+        stdscr.addstr(3, 2, f"{'N°':<4} {'Producto':<20} {'Precio':<10} {'Stock'}")
+        stdscr.addstr(4, 2, "─"*44)
+        for i, p in enumerate(productos):
+            stdscr.addstr(5+i, 2, f"{i+1:<4} {p['nombre']:<20} ${p['precio']:<9.2f} {p['cantidad']}")
 
+        stdscr.refresh()
+
+        elec = input_box(stdscr, "Elige número del producto (0 para terminar):", y_start=6+len(productos))
         if elec == "0":
             break
 
         try:
             indice = int(elec) - 1
             if indice < 0 or indice >= len(productos):
-                print(" ⚠ Opción inválida.")
-                continue
+                raise ValueError
 
             producto = productos[indice]
 
-            #verificar stock
-            cantidad = int(input(f" 📦 Cantidad de '{producto['nombre']}': "))
+            cantidad_str = input_box(stdscr, f"Cantidad de '{producto['nombre']}':", y_start=11+len(productos))
+            cantidad = int(cantidad_str)
+
             if cantidad > producto['cantidad']:
-                print(" ⚠ No hay suficiente stock.")
+                stdscr.addstr(13+len(productos), 2, "⚠ No hay suficiente stock.")
+                stdscr.refresh()
+                stdscr.getch()
                 continue
 
-            #Calcular subtotal
             subtotal = producto['precio'] * cantidad
-
-            #Guardar en el carrito
             carrito.append({"nombre": producto['nombre'], "cantidad": cantidad, "precio_unitario": producto['precio'], "subtotal": subtotal})
 
-            #Actualizar stock del producto
             nueva_cantidad = producto['cantidad'] - cantidad
-            cursor.execute("UPDATE productos SET cantidad = ? WHERE id = ?", (nueva_cantidad, producto['id']))
+            cursor.execute("UPDATE productos SET cantidad=? WHERE id=?", (nueva_cantidad, producto['id']))
             conn.commit()
-
             productos[indice]['cantidad'] = nueva_cantidad
 
-            print(f" ✅ Agregado: {cantidad} x {producto['nombre']} (${subtotal:.2f})")
+            stdscr.addstr(15+len(productos), 2, f"✅ Agregado: {cantidad} x {producto['nombre']} (${subtotal:.2f})")
+            stdscr.refresh()
+            stdscr.getch()
 
         except ValueError:
-            print(" ⚠ Se debe ingresar un número válido.")
+            stdscr.addstr(13+len(productos), 2, "⚠ Debes ingresar un número válido")
+            stdscr.refresh()
+            stdscr.getch()
 
-    if len(carrito) == 0:
-        print(" ⛔ No se registró ninguna venta.")
+    if not carrito:
         conn.close()
         return
 
-    #venta = Venta(carrito)
-    #ventas.append(venta)
-
-    # Calcular total
-    total_venta = sum(item['subtotal'] for item in carrito)
-    fecha_actual = datetime.now().strftime('%Y-%m-%d || %H:%M:%S')
-
     # Insertar venta
+    total_venta = sum(item['subtotal'] for item in carrito)
+    fecha_actual = datetime.now().strftime("%Y-%m-%d || %H:%M:%S")
     cursor.execute("INSERT INTO ventas (cliente_id, total, fecha) VALUES (?, ?, ?)", (None, total_venta, fecha_actual))
     venta_id = cursor.lastrowid
 
-    # Insertar detalles de la venta
     for item in carrito:
         producto_id = next((p['id'] for p in productos if p['nombre'] == item['nombre']), None)
         cursor.execute("""
-            INSERT INTO venta_items (venta_id, producto_id, nombre, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)
-            """, (venta_id, producto_id, item['nombre'], item['cantidad'], item['precio_unitario'], item['subtotal']))
+            INSERT INTO venta_items (venta_id, producto_id, nombre, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)""",
+            (venta_id, producto_id, item['nombre'], item['cantidad'], item['precio_unitario'], item['subtotal'])
+        )
 
     conn.commit()
-
-    print("\n ✅ ¡Venta registrada con éxito!\n")
-    print(" 🧾 Detalles de la venta")
-    print("──────────────────────────────────────────")
-    for item in carrito:
-        print(f" 🛍️  {item['cantidad']} x {item['nombre']} @ ${item['precio_unitario']:.2f} = ${item['subtotal']:.2f}")
-    print("──────────────────────────────────────────")
-    print(f" 💵 Total de la venta: ${total_venta:.2f}")
+    stdscr.addstr(12+len(productos), 2, f"✅ Venta registrada con éxito! Total: ${total_venta:.2f}")
+    stdscr.refresh()
+    stdscr.getch()
     conn.close()
-
+    
 def listar_ventas():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -111,7 +125,7 @@ def listar_ventas():
         conn.close()
         return
 
-    print("\n 📒 Historial de Ventas")
+    print("\n 📒 HISTORIAL DE VENTAS")
     print("══════════════════════════════════════════════════════════════════")
     for v in ventas:
         print(f"\n 🧾 Venta ID: {v['id']} | Fecha: {v['fecha']} | Total: ${v['total']:.2f}")
@@ -127,50 +141,75 @@ def listar_ventas():
 
     conn.close()
 
-def eliminar_venta():
-    from database.conexion import get_db_connection
-
+def eliminar_venta_tui(stdscr):
+    curses.curs_set(0)
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    try:
-        # Mostrar las ventas disponibles
-        cursor.execute("SELECT id, fecha, total FROM ventas")
-        ventas = cursor.fetchall()
+    # Mostrar las ventas disponibles
+    cursor.execute("SELECT id, fecha, total FROM ventas")
+    ventas = cursor.fetchall()
 
-        if not ventas:
-            print("\n ⛔ No hay ventas registradas.")
-            conn.close()
-            return
-
-        print("\n 📒 Ventas registradas ")
-        print("─────────────────────────────────────────")
-        print(f" {'ID':<4} {'Fecha y Hora':<25} {'Total':<10} ")
-        print("─────────────────────────────────────────")
-        for v in ventas:
-            print(f" {v['id']:<4} {v['fecha']:<25} ${v['total']:<10.2f}")
-            #print(f" 🧾 ID: {v['id']} | Fecha: {v['fecha']} | Total: ${v['total']}")
-        print("─────────────────────────────────────────")
-
-        # Pedir el ID de la ventan a eliminar
-        venta_id = input("\n 💬 ID de la venta a eliminar: ")
-
-        # Verificar que exista
-        cursor.execute("SELECT id FROM ventas WHERE id = ?", (venta_id,))
-        venta = cursor.fetchone()
-
-        if venta:
-            confirmar = input(f" Está seguro de eliminar la venta ID {venta_id}? (s/n): ").lower()
-            if confirmar == "s":
-                cursor.execute("DELETE FROM ventas WHERE id = ?", (venta_id,))
-                conn.commit()
-                print("\n ✅ Venta eliminada correctamente.")
-            else:
-                print("\n ❌ Operación cancelada.")
-        else:
-            print("\n ⚠ No existe ninguna venta con ese ID.")
-
-    except Exception as e:
-        print(" ⚠ Error al eliminar la venta:", e)
-    finally:
+    if not ventas:
+        stdscr.clear()
+        stdscr.addstr(2, 2, "⛔ No hay ventas registrados.")
+        stdscr.refresh()
+        stdscr.getch()
         conn.close()
+        return
+    
+    opciones = [f"{p['id']}- {p['fecha']} -> ${p['total']:.2f}" for p in ventas]
+    opciones.append("Volver")
+
+    current_row = 0
+    while True:
+        stdscr.clear()
+        h, w = stdscr.getmaxyx()
+
+        # Título:
+        titulo = "🆕 ELIMINAR VENTA"
+        separador = "─" * (len(titulo) + 4)
+        stdscr.addstr(1, max(2, w//2 - len(titulo)//2), titulo)
+        stdscr.addstr(2, max(2, w//2 - len(separador)//2), separador)
+        stdscr.refresh()
+
+        for idx, row in enumerate(opciones):
+            x = 2
+            y = 3 + idx
+            if idx == current_row:
+                stdscr.attron(curses.color_pair(1))
+                stdscr.addstr(y, x, row)
+                stdscr.attroff(curses.color_pair(1))
+            else:
+                stdscr.addstr(y, x, row)
+        stdscr.refresh()
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < len(opciones) - 1:
+            current_row += 1
+        elif key in [curses.KEY_ENTER, 10, 13]:
+            if opciones[current_row] == "Volver":
+                break
+            venta_selec = ventas[current_row]
+            stdscr.clear()
+            msg = f"⚠ Eliminar venta ID'{venta_selec['id']}'? (s/n)"
+            stdscr.addstr(2, 2, msg)
+            stdscr.refresh()
+            confirmar = stdscr.getkey().lower()
+       
+            if confirmar == 's':
+                cursor.execute("DELETE FROM ventas WHERE id = ?", (venta_selec['id'],))
+                conn.commit()
+                stdscr.addstr(4, 2, "✅ Venta eliminada correctamente.")
+                stdscr.refresh()
+                stdscr.getch()
+                break
+            else:
+                stdscr.addstr(4, 2, "❌ Operación cancelada.")
+                stdscr.refresh()
+                stdscr.getch()
+                break
+
+    conn.close()
