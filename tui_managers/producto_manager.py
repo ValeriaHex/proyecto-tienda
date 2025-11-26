@@ -1,6 +1,6 @@
 import curses
-from database.conexion import get_db_connection
 from modelos.producto import Producto
+from dao.productoDAO import ProductoDao
 from curses import textpad
 
 def input_box(stdscr, prompt):
@@ -47,58 +47,59 @@ def agregar_productos_tui(stdscr):
      stdscr.getch()
      return
   
-  producto = Producto(nombre, precio, talla, color, categoria, cantidad)
-  conn = get_db_connection()
-  cursor = conn.cursor()
-  cursor.execute(
-	  "INSERT INTO productos (nombre, precio, talla, color, categoria, cantidad) VALUES (?, ?, ?, ?, ?, ?)",
-    (producto.nombre, producto.precio, producto.talla, producto.color, producto.categoria, producto.cantidad)
-  )
-  conn.commit()
-  conn.close()
+  producto = Producto(nombre, precio, talla, color,categoria, cantidad)
+  dao = ProductoDao()
+  dao.agregarP(producto)
 
   stdscr.addstr(8, 2, f"✅ Producto '{nombre}' agregado correctamente.")
   stdscr.refresh()
   stdscr.getch()
 
-def listar_productos():
-	conn = get_db_connection()
-	cursor = conn.cursor()
-	cursor.execute("SELECT * FROM productos")
-	filas = cursor.fetchall()
-	conn.close()
-
-	if not filas:
-		print(" ⛔ No hay productos registrados.")
-		return
-
-	print("\n 📋 LISTA DE PRODUCTOS ")
-	print("──────────────────────────────────────────────────────────────────────────────")
-	print(f" {'ID':<4} {'Nombre':<20} {'Precio':<10} {'Stock':<8} {'Talla':<8} {'Color':<10} {'Categoría'}")
-	print("──────────────────────────────────────────────────────────────────────────────")
-
-	for fila in filas:
-		#print(f" {fila['id']} - {fila['nombre']} | Precio: ${fila['precio']} | Stock: {fila['cantidad']}")
-		print(f" {fila['id']:<4} {fila['nombre']:<20} ${fila['precio']:<9.2f} {fila['cantidad']:<8} {fila['talla'] or '-':<8} {fila['color'] or '-':<10} {fila['categoria'] or '-'}")
-	print("──────────────────────────────────────────────────────────────────────────────\n")
-
-def eliminar_producto_tui(stdscr):
-  curses.curs_set(0)
-  conn = get_db_connection()
-  cursor = conn.cursor()
-  
-  cursor.execute("SELECT id, nombre, precio, cantidad FROM productos ORDER BY id")
-  productos = cursor.fetchall()
-  
+def listar_productos_tui(stdscr):
+  dao = ProductoDao()
+  productos = dao.listarP()
+    
   if not productos:
     stdscr.clear()
     stdscr.addstr(2, 2, "⛔ No hay productos registrados.")
     stdscr.refresh()
     stdscr.getch()
-    conn.close()
+    return
+
+  stdscr.clear()
+  stdscr.addstr(1, 2, "📋 LISTA DE PRODUCTOS")
+  stdscr.addstr(2, 2, "──────────────────────────────────────────────────────────────────────────────")
+  stdscr.addstr(3, 2, f" {'ID':<4} {'Nombre':<20} {'Precio':<10} {'Stock':<8} {'Talla':<8} {'Color':<10} {'Categoría'}")
+  stdscr.addstr(4, 2, "──────────────────────────────────────────────────────────────────────────────")
+  
+  ult_fila = 4 + len(productos)
+  for i, p in enumerate(productos):
+    
+    try:
+      precio = float(p.precio)
+      cantidad = int(p.cantidad)
+    except (ValueError, TypeError):
+      precio = 0.0
+      cantidad = 0
+      
+    stdscr.addstr(5+i, 3, f"{p.id:<4} {p.nombre:<20} ${p.precio:<9.2f} {p.cantidad:<8} {p.talla or '-':<8} {p.color or '-':<10} {p.categoria or '-'}")  
+    stdscr.addstr(ult_fila+1, 2, "──────────────────────────────────────────────────────────────────────────────")
+  stdscr.refresh()
+  stdscr.getch()
+
+def eliminar_producto_tui(stdscr):
+  curses.curs_set(0)
+  dao = ProductoDao()
+  productos = dao.listarP()
+  
+  if not productos:
+    stdscr.clear()
+    stdscr.addstr(2, 2, "⛔ No hay productos registrados.")
+    stdscr.refresh()
+    stdscr.getch() 
     return
   
-  opciones = [f"{p['id']}- {p['nombre']} - ${p['precio']:.2f} | Stock: {p['cantidad']}" for p in productos]
+  opciones = [f"{p.id}. {p.nombre} - ${p.precio:.2f} | Stock: {p.cantidad}" for p in productos]
   opciones.append("Volver")
 
   current_row = 0
@@ -135,16 +136,14 @@ def eliminar_producto_tui(stdscr):
           break
        producto = productos[current_row]
        stdscr.clear()
-       msg = f"⚠ Eliminar '{producto['nombre']}'? (s/n)"
+       msg = f"⚠ Eliminar '{producto.nombre}'? (s/n)"
        stdscr.addstr(2, 2, msg)
        stdscr.refresh()
        confirmar = stdscr.getkey().lower()
        if confirmar == 's':
-          cursor.execute("DELETE FROM productos WHERE id = ?", (producto['id'],))
-          conn.commit()
+          dao.eliminarP(producto.id)
           stdscr.addstr(4, 2, "✅ Producto eliminado correctamente.")
           stdscr.refresh()
           stdscr.getch()
           break
        
-  conn.close()

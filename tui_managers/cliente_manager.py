@@ -1,6 +1,6 @@
 import curses
 from modelos.cliente import Cliente
-from database.conexion import get_db_connection
+from dao.clienteDao import ClienteDAO
 from datetime import datetime
 from curses import textpad
 
@@ -30,66 +30,58 @@ def input_box(stdscr, prompt):
   return ui
 
 def agregar_clientes_tui(stdscr):
-	stdscr.clear()
-	h, w = stdscr.getmaxyx()
+  stdscr.clear()
+  h, w = stdscr.getmaxyx()
+  
+  nombre = input_box(stdscr, "🔤 Nombre del cliente: ")
+  correo = input_box(stdscr, "📧 Correo del cliente: ")
+  direccion = input_box(stdscr, "🏠 Direccion de envío: ")
+  
+  cliente = Cliente(nombre, correo, direccion)
+  dao = ClienteDAO()
+  dao.agregarC(cliente)
+  
+  stdscr.addstr(8, 2, f"✅ Cliente '{nombre}' agregado correctamente.")
+  stdscr.refresh()
+  stdscr.getch()
 
-	nombre = input_box(stdscr, "🔤 Nombre del cliente: ")
-	correo = input_box(stdscr, "📧 Correo del cliente: ")
-	direccion = input_box(stdscr, "🏠 Direccion de envío: ")
-
-	cliente = Cliente(nombre, correo, direccion)
-	conn = get_db_connection()
-	cursor = conn.cursor()
-	cursor.execute(
-	  "INSERT INTO clientes (nombre, correo, direccion, fecha_registro) VALUES (?, ?, ?, ?)",
-	  (cliente.nombre, cliente.correo, cliente.direccion, cliente.fecha_registro)
-	)
-	conn.commit()
-	conn.close()
-
-	stdscr.addstr(8, 2, f"✅ Cliente '{nombre}' agregado correctamente.")
-	stdscr.refresh()
-	stdscr.getch()
-
-def listar_clientes():
-	conn = get_db_connection()
-	cursor = conn.cursor()
-	cursor.execute("SELECT * FROM clientes")
-	filas = cursor.fetchall()
-	conn.close()
-
-	if not filas:
-		print(" ⛔ No hay clientes registrados.")
-		return
-	print("\n 📋 LISTA DE CLIENTES ")
-	print("───────────────────────────────────────────────────────────────────────────────────────────────")
-	print(f" {'ID':<3} {'Nombre':<15} {'Correo':<20} {'Dirección':<25} {'Fecha Registro'}")
-	print("───────────────────────────────────────────────────────────────────────────────────────────────")
-
-	#for i, fila in enumerate(filas, 1):
-	#	print(f" {i}. {fila['nombre']} - {fila['correo']} - {fila['direccion']} - {fila['fecha_registro']}")
-	for fila in filas:
-		print(f" {fila['id']:<3} {fila['nombre']:<15} {fila['correo']:<20} {fila['direccion']:<25} {fila['fecha_registro']}")
-
-	print("───────────────────────────────────────────────────────────────────────────────────────────────\n")
+def listar_clientes_tui(stdscr):
+  dao = ClienteDAO()
+  clientes = dao.listarC()
+  
+  if not clientes:
+    stdscr.clear()
+    stdscr.addstr(2, 2, "No hay clientes registrados.")
+    stdscr.refresh()
+    stdscr.getch()
+    return
+  
+  stdscr.clear()
+  stdscr.addstr(1, 2, "📋 LISTA DE CLIENTES")
+  stdscr.addstr(2, 2, "───────────────────────────────────────────────────────────────────────────────────────────────")
+  stdscr.addstr(3, 2, f" {'ID':<3} {'Nombre':<15} {'Correo':<20} {'Dirección':<25} {'Fecha Registro'}")
+  stdscr.addstr(4, 2, "───────────────────────────────────────────────────────────────────────────────────────────────")
+  
+  ult_fila = 4 + len(clientes)
+  for i, p in enumerate(clientes):  
+    stdscr.addstr(5+i, 3, f"{p.id:<3} {p.nombre:<15} {p.correo:<20} {p.direccion:<25} {p.fecha_registro}")  
+    stdscr.addstr(ult_fila+1, 2, "───────────────────────────────────────────────────────────────────────────────────────────────")
+  stdscr.refresh()
+  stdscr.getch()
 
 def eliminar_cliente_tui(stdscr):
   curses.curs_set(0)
-  conn = get_db_connection()
-  cursor = conn.cursor()
-  
-  cursor.execute("SELECT id, nombre, correo, direccion FROM clientes ORDER BY id")
-  clientes = cursor.fetchall()
+  dao = ClienteDAO()
+  clientes = dao.listarC()
   
   if not clientes:
     stdscr.clear()
     stdscr.addstr(2, 2, "⛔ No hay clientes registrados.")
     stdscr.refresh()
     stdscr.getch()
-    conn.close()
     return
   
-  opciones = [f"{p['id']}- {p['nombre']}  | Correo: {p['correo']}" for p in clientes]
+  opciones = [f"{p.id}. {p.nombre}  | Correo: {p.correo}" for p in clientes]
   opciones.append("Volver")
 
   current_row = 0
@@ -126,17 +118,15 @@ def eliminar_cliente_tui(stdscr):
           break
        cliente = clientes[current_row]
        stdscr.clear()
-       msg = f"⚠ Eliminar cliente '{cliente['nombre']}'? (s/n)"
+       msg = f"⚠ Eliminar cliente '{cliente.nombre}'? (s/n)"
        stdscr.addstr(2, 2, msg)
        stdscr.refresh()
        confirmar = stdscr.getkey().lower()
        
        if confirmar == 's':
-          cursor.execute("DELETE FROM clientes WHERE id = ?", (cliente['id'],))
-          conn.commit()
+          dao.eliminarC(cliente.id)
           stdscr.addstr(4, 2, "✅ Cliente eliminado correctamente.")
           stdscr.refresh()
           stdscr.getch()
           break
-       
-  conn.close()
+      

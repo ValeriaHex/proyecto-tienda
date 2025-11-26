@@ -1,6 +1,7 @@
 class Producto:
 	
-	def __init__(self, nombre, precio, talla, color, categoria, cantidad):
+	def __init__(self, nombre="", precio=0.0, talla="", color="", categoria="", cantidad=0, id=None):		
+		self.id = id
 		self.nombre = nombre
 		self.precio = precio
 		self.talla = talla
