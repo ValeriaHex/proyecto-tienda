@@ -1,4 +1,4 @@
-from conexion import get_db_connection, DB_PATH
+from database.conexion import get_db_connection, DB_PATH
 
 def crear_tablas():
 	conn = get_db_connection()

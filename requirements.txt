@@ -13,3 +13,4 @@ typing_extensions==4.15.0
 uc-micro-py==1.0.3
 windows-curses==2.4.1
 streamlit==1.51.0
+coverage>=7.12.0
